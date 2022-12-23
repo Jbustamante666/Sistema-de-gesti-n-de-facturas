@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,11 +17,36 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    // return view('welcome');
+    return redirect()->route('dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth'])->name('dashboard');
+Route::middleware(['auth'])
+    ->prefix('dashboard')->group(function () {
+        Route::get('', function () {
+            return view('dashboard');
+        })->name('dashboard');
 
-require __DIR__.'/auth.php';
+        Route::middleware('role:admin')
+            ->group(function () {
+                Route::resource('products', ProductController::class);
+                Route::name('invoice.')
+                    ->prefix('invoices')
+                    ->group(function () {
+                        Route::get('', [InvoiceController::class, 'index'])->name('index');
+                        Route::post('generate', [InvoiceController::class, 'generate'])->name('generate');
+                        Route::get('{invoice}/show', [InvoiceController::class, 'show'])->name('show');
+                    });
+            });
+
+        Route::middleware('role:user')
+            ->prefix('shop')
+            ->name('shop.')
+            ->group(function () {
+                Route::get('', [PurchaseController::class, 'index'])->name('index');
+                Route::post('{product}', [PurchaseController::class, 'create'])->name('create');
+            });
+    });
+
+
+require __DIR__ . '/auth.php';
